@@ -1,60 +1,57 @@
-import { createSlice } from '@reduxjs/toolkit';
-import { updateCart } from '../utils/cartUtils';
+import { Row, Col } from 'react-bootstrap';
+import { useParams } from 'react-router-dom';
+import { useGetProductsQuery } from '../slices/productsApiSlice';
+import { Link } from 'react-router-dom';
+import Product from '../components/Product';
+import Loader from '../components/Loader';
+import Message from '../components/Message';
+import Paginate from '../components/Paginate';
+import ProductCarousel from '../components/ProductCarousel';
+import Meta from '../components/Meta';
 
-const initialState = localStorage.getItem('cart')
-  ? JSON.parse(localStorage.getItem('cart'))
-  : { cartItems: [], shippingAddress: {}, paymentMethod: 'PayPal' };
+const HomeScreen = () => {
+  const { pageNumber, keyword } = useParams();
 
-const cartSlice = createSlice({
-  name: 'cart',
-  initialState,
-  reducers: {
-    addToCart: (state, action) => {
-      // NOTE: we don't need user, rating, numReviews or reviews
-      // in the cart
-      const { user, rating, numReviews, reviews, ...item } = action.payload;
+  const { data, isLoading, error } = useGetProductsQuery({
+    keyword,
+    pageNumber,
+  });
 
-      const existItem = state.cartItems.find((x) => x._id === item._id);
+  return (
+    <>
+      {!keyword ? (
+        <ProductCarousel />
+      ) : (
+        <Link to='/' className='btn btn-light mb-4'>
+          Go Back
+        </Link>
+      )}
+      {isLoading ? (
+        <Loader />
+      ) : error ? (
+        <Message variant='danger'>
+          {error?.data?.message || error.error}
+        </Message>
+      ) : (
+        <>
+          <Meta />
+          <h1>Latest Products</h1>
+          <Row>
+            {data.products.map((product) => (
+              <Col key={product._id} sm={12} md={6} lg={4} xl={3}>
+                <Product product={product} />
+              </Col>
+            ))}
+          </Row>
+          <Paginate
+            pages={data.pages}
+            page={data.page}
+            keyword={keyword ? keyword : ''}
+          />
+        </>
+      )}
+    </>
+  );
+};
 
-      if (existItem) {
-        state.cartItems = state.cartItems.map((x) =>
-          x._id === existItem._id ? item : x
-        );
-      } else {
-        state.cartItems = [...state.cartItems, item];
-      }
-
-      return updateCart(state, item);
-    },
-    removeFromCart: (state, action) => {
-      state.cartItems = state.cartItems.filter((x) => x._id !== action.payload);
-      return updateCart(state);
-    },
-    saveShippingAddress: (state, action) => {
-      state.shippingAddress = action.payload;
-      localStorage.setItem('cart', JSON.stringify(state));
-    },
-    savePaymentMethod: (state, action) => {
-      state.paymentMethod = action.payload;
-      localStorage.setItem('cart', JSON.stringify(state));
-    },
-    clearCartItems: (state, action) => {
-      state.cartItems = [];
-      localStorage.setItem('cart', JSON.stringify(state));
-    },
-    // NOTE: here we need to reset state for when a user logs out so the next
-    // user doesn't inherit the previous users cart and shipping
-    resetCart: (state) => (state = initialState),
-  },
-});
-
-export const {
-  addToCart,
-  removeFromCart,
-  saveShippingAddress,
-  savePaymentMethod,
-  clearCartItems,
-  resetCart,
-} = cartSlice.actions;
-
-export default cartSlice.reducer;
+export default HomeScreen;
