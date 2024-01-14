@@ -5,14 +5,19 @@ import User from '../models/userModel.js';
 // @desc    Auth user & get token
 // @route   POST /api/users/auth
 // @access  Public
+// Authenticate user and get token
+// This function is responsible for handling user login requests.
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  // Find the user by email
   const user = await User.findOne({ email });
 
+  // Check if user exists and password is correct
   if (user && (await user.matchPassword(password))) {
+    // Generate a token for the user
     generateToken(res, user._id);
-
+    // Respond with user data (excluding the password)
     res.json({
       _id: user._id,
       name: user.name,
@@ -20,6 +25,7 @@ const authUser = asyncHandler(async (req, res) => {
       isAdmin: user.isAdmin,
     });
   } else {
+    // If authentication fails, return an error
     res.status(401);
     throw new Error('Invalid email or password');
   }
@@ -166,6 +172,7 @@ const updateUser = asyncHandler(async (req, res) => {
   if (user) {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
+    // Convert isAdmin to a boolean in case it's provided as a string
     user.isAdmin = Boolean(req.body.isAdmin);
 
     const updatedUser = await user.save();
@@ -193,3 +200,18 @@ export {
   getUserById,
   updateUser,
 };
+
+/*
+    --> MONGOOSE METHODS USED
+    const user  = await User.findOne({ email });
+    const user  = await User.findById(req.user._id);
+    const user  = await User.findById(req.params.id);
+    const users = await User.find({});
+    const updatedUser = await user.save();
+    await User.deleteOne({ _id: user._id });
+    
+    --> OTHERS
+    if (user && (await user.matchPassword(password))) {
+    user.isAdmin = Boolean(req.body.isAdmin);
+    generateToken(res, user._id);
+ */
